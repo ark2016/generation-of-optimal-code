@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+struct MyStruct {
+    int values[3];
+    float coeff;
+};
+
 int sum(int a, int b) {
     int res;
     res = a + b;
@@ -19,8 +24,19 @@ int main() {
     } else {
         a -= c;
     }
-    printf("a = %d, b = %d, sum: %d\n", a, b, sum(a,b));
-    arr[0] = sum(a,b);
+
+    // Структура и её использование
+    struct MyStruct ms;
+    ms.values[0] = sum(a, b);          // доступ к полю-массиву через точку
+    int z1 = ms.values[0];             // считывание через точку
+
+    struct MyStruct *pms = &ms;
+    pms->values[1] = sum(a, b);        // доступ через указатель
+    int z2 = pms->values[1];           // считывание через указатель
+
+    printf("a = %d, b = %d, z1 = %d, z2 = %d\n", a, b, z1, z2);
+
+    arr[0] = sum(a, b);
     int z = arr[0];
     printf("z = %d\n", z);
     free(arr);
