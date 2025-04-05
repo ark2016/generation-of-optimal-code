@@ -89,17 +89,33 @@ static unsigned int lab1_tree(tree t)
         case CONST_DECL:
             std::cout << (DECL_NAME(t) ? IDENTIFIER_POINTER(DECL_NAME(t)) : "const_decl");
             break;
+        // Обработка обращения к элементу массива, например, arr[5]
         case ARRAY_REF:
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << "[";
             lab1_tree(TREE_OPERAND(t, 1));
             std::cout << "]";
             break;
+        // Обработка обращения к памяти
         case MEM_REF:
             std::cout << "(*";
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << ")";
             break;
+        // COMPONENT_REF – доступ к полю структуры
+        case COMPONENT_REF:
+        {
+            // Первый операнд – выражение структуры (например, myFolder)
+            lab1_tree(TREE_OPERAND(t, 0));
+            std::cout << ".";
+            // Второй операнд – имя поля (FIELD_DECL)
+            tree field = TREE_OPERAND(t, 1);
+            if (TREE_CODE(field) == FIELD_DECL && DECL_NAME(field))
+                std::cout << IDENTIFIER_POINTER(DECL_NAME(field));
+            else
+                lab1_tree(field);
+            break;
+        }
         case SSA_NAME: {
             // Если SSA_NAME имеет определяющую инструкцию типа GIMPLE_PHI, выводим информацию о ней.
             gimple* st = SSA_NAME_DEF_STMT(t);
