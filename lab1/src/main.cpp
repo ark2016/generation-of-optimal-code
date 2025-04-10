@@ -89,23 +89,22 @@ static unsigned int lab1_tree(tree t)
         case CONST_DECL:
             std::cout << (DECL_NAME(t) ? IDENTIFIER_POINTER(DECL_NAME(t)) : "const_decl");
             break;
-        // Обработка обращения к элементу массива, например, arr[5]
+        // arr[5]
         case ARRAY_REF:
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << "[";
             lab1_tree(TREE_OPERAND(t, 1));
             std::cout << "]";
             break;
-        // Обработка обращения к памяти
         case MEM_REF:
             std::cout << "(*";
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << ")";
             break;
-        // COMPONENT_REF – доступ к полю структуры
+                // Новый кейс: COMPONENT_REF – доступ к полю структуры
         case COMPONENT_REF:
         {
-            // Первый операнд – выражение структуры (например, myFolder)
+            // Первый операнд – выражение структуры
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << ".";
             // Второй операнд – имя поля (FIELD_DECL)
@@ -294,7 +293,7 @@ struct lab1_pass : public gimple_opt_pass {
 // Регистрируем проход.
 // Для простоты используем глобальный контекст g, который должен быть определён в <context.h>.
 static struct register_pass_info lab1_pass_info = {
-    new lab1_pass(g),            // Если возникают проблемы, можно заменить на new lab1_pass(NULL)
+    new lab1_pass(g),
     "ssa",                       // Привязываемся к ssa-пассу
     1,                           // Запуск один раз
     PASS_POS_INSERT_AFTER        // Позиционирование: после ssa-пасса
