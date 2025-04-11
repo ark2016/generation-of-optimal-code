@@ -101,7 +101,7 @@ static unsigned int lab1_tree(tree t)
             lab1_tree(TREE_OPERAND(t, 0));
             std::cout << ")";
             break;
-                // Новый кейс: COMPONENT_REF – доступ к полю структуры
+                //COMPONENT_REF – доступ к полю структуры
         case COMPONENT_REF:
         {
             // Первый операнд – выражение структуры
