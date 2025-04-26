@@ -370,46 +370,37 @@ Value *BinaryExprAST::codegen()
 // Генерация кода для выражения 'if-else'
 Value *IfExprAST::codegen()
 {
-    // 1. Генерируем код для условия
     Value *cond_v = m_cond->codegen();
     if (!cond_v)
         return nullptr;
 
-    // 2. Сравниваем результат условия с нулем.
-    // В C-подобных языках, 0 - ложь, не 0 - истина.
     cond_v = g_builder->CreateICmpNE(cond_v,
                                      ConstantInt::get(*g_context, APInt(32, 0, false)), "ifcond");
 
-    // Получаем текущую функцию, в которую добавляется код
     Function *the_function = g_builder->GetInsertBlock()->getParent();
 
-    // 3. Создаем базовые блоки для веток 'then', 'else' и для слияния после 'if'
     BasicBlock *then_bb = BasicBlock::Create(*g_context, "then", the_function);
     BasicBlock *else_bb = BasicBlock::Create(*g_context, "else");    
     BasicBlock *merge_bb = BasicBlock::Create(*g_context, "ifcont"); 
 
-    // 4. Создаем инструкцию условного перехода
     g_builder->CreateCondBr(cond_v, then_bb, else_bb);
 
-    // 5. Генерируем код для блока 'then'
     g_builder->SetInsertPoint(then_bb); // Переключаем IRBuilder на блок 'then'
     // Генерируем код для каждого выражения в блоке 'then'
     for (const auto &expr : m_then)
     {
-        expr->codegen(); // Результат выражений внутри if/else игнорируется
+        expr->codegen(); 
     }
-    g_builder->CreateBr(merge_bb); // В конце 'then' переходим к блоку слияния
+    g_builder->CreateBr(merge_bb); 
 
-    // 6. Генерируем код для блока 'else'
-    the_function->insert(the_function->end(), else_bb); // Добавляем блок 'else' в функцию
-    g_builder->SetInsertPoint(else_bb);                 // Переключаем IRBuilder на блок 'else'
+    the_function->insert(the_function->end(), else_bb); 
+    g_builder->SetInsertPoint(else_bb);                 
     for (const auto &expr : m_else)
     {
-        expr->codegen(); // Результат выражений внутри if/else игнорируется
+        expr->codegen(); 
     }
-    g_builder->CreateBr(merge_bb); // В конце 'else' переходим к блоку слияния
+    g_builder->CreateBr(merge_bb); 
 
-    // 7. Код после 'if-else' будет генерироваться в блоке слияния
     the_function->insert(the_function->end(), merge_bb); // Добавляем блок слияния в функцию
     g_builder->SetInsertPoint(merge_bb);                 // Переключаем IRBuilder на блок слияния
 
@@ -419,39 +410,31 @@ Value *IfExprAST::codegen()
 // Генерация кода для цикла 'for'
 Value *ForExprAST::codegen()
 {
-    // Получаем текущую функцию
     Function *the_function = g_builder->GetInsertBlock()->getParent();
 
-    // 1. Генерируем код для инициализации цикла (выполняется один раз перед циклом)
-    // Результат инициализации (если он есть) игнорируется в контексте управления циклом.
     Value *start_val = m_start->codegen();
     if (!start_val)
         return nullptr;
 
-    // 2. Создаем базовый блок для тела цикла ('loop') и блок для кода после цикла ('afterloop')
     BasicBlock *loop_bb = BasicBlock::Create(*g_context, "loop", the_function);
     BasicBlock *after_bb = BasicBlock::Create(*g_context, "afterloop"); 
 
-    // 3. Переходим из текущего блока в начало блока цикла
     g_builder->CreateBr(loop_bb);
 
-    // 4. Генерируем код для тела цикла
-    g_builder->SetInsertPoint(loop_bb); // Переключаем IRBuilder на блок 'loop'
+    g_builder->SetInsertPoint(loop_bb); 
     for (const auto &expr : m_body)
     {
-        expr->codegen(); // Результаты выражений в теле цикла игнорируются
+        expr->codegen(); 
     }
 
-    // 5. Генерируем код для шага цикла (step)
     Value *step_val = nullptr;
     if (m_step)
     {
-        step_val = m_step->codegen(); // Генерируем код для выражения шага
+        step_val = m_step->codegen(); 
         if (!step_val)
             return nullptr;
     }
 
-    // 6. Генерируем код для условия выхода из цикла
     Value *end_cond = m_end->codegen(); 
     if (!end_cond)
         return nullptr;
@@ -460,10 +443,8 @@ Value *ForExprAST::codegen()
     end_cond = g_builder->CreateICmpNE(end_cond,
                                        ConstantInt::get(*g_context, APInt(32, 0, false)), "loopcond");
 
-    // 7. Создаем условный переход в конце тела цикла
     g_builder->CreateCondBr(end_cond, loop_bb, after_bb);
 
-    // 8. Добавляем блок 'afterloop' в функцию и устанавливаем точку вставки туда
     the_function->insert(the_function->end(), after_bb);
     g_builder->SetInsertPoint(after_bb);
 
@@ -476,10 +457,8 @@ Function *PrototypeAST::codegen()
     // Создаем вектор типов аргументов (все int32)
     std::vector<Type *> arg_types(m_args.size(), Type::getInt32Ty(*g_context));
 
-    // Создаем тип функции: int32(int32, int32, ...)
     FunctionType *ft = FunctionType::get(Type::getInt32Ty(*g_context), arg_types, false); // false - не вариативная
 
-    // Создаем функцию LLVM
     Function *f = Function::Create(ft, Function::ExternalLinkage, m_name, g_module.get());
 
     // Устанавливаем имена для аргументов функции LLVM
@@ -501,9 +480,8 @@ Function *FunctionAST::codegen()
         return nullptr;
     }
 
-    // Создаем базовый блок "entry" для начала выполнения функции
     BasicBlock *bb = BasicBlock::Create(*g_context, "entry", the_function);
-    g_builder->SetInsertPoint(bb); // Устанавливаем точку вставки IRBuilder в этот блок
+    g_builder->SetInsertPoint(bb); 
 
     // Очищаем таблицу символов для локальных переменных этой функции
     g_named_values.clear();
@@ -515,17 +493,15 @@ Function *FunctionAST::codegen()
         g_named_values[std::string(arg.getName())] = alloca;
     }
 
-    // Генерируем код для тела функции
     Value *ret_val = nullptr;
     for (const auto &expr : m_body)
     {
-        ret_val = expr->codegen(); // Генерируем код для каждого выражения
+        ret_val = expr->codegen(); 
     }
-
-    // Завершаем функцию инструкцией 'ret'
+    
     if (ret_val)
     {
-        g_builder->CreateRet(ret_val); // Возвращаем результат последнего выражения
+        g_builder->CreateRet(ret_val); 
     }
     else
     {
@@ -535,7 +511,6 @@ Function *FunctionAST::codegen()
         g_builder->CreateRet(ret_val);
     }
 
-    // Проверяем сгенерированную функцию на корректность
     verifyFunction(*the_function);
 
     return the_function;
@@ -569,17 +544,11 @@ FunctionAST *Parse()
     std::string func_name = g_str_val;
     getNextToken();
 
-    // Парсим список аргументов
     auto args = ParseVars();
     // Создаем узел AST для прототипа функции
     auto proto = std::make_unique<PrototypeAST>(func_name, std::move(args));
-
-    // Парсим тело функции
     auto body = ParseBody();
-
-    // Ожидаем конец файла после тела функции
     assertion(kTokenEof);
-
     return new FunctionAST(std::move(proto), std::move(body));
 }
 
