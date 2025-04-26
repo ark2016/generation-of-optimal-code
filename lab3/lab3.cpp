@@ -21,7 +21,7 @@
 #include <stdexcept>
 
 using namespace llvm;
-x enum Token {
+enum Token {
     kTokenError = 0x4000,  // Ошибка лексического анализа
     kTokenEof = 0x2000,    // Конец файла (End Of File)
     kTokenIdent = 0x1000,  // Идентификатор (имя переменной/функции)
