@@ -807,7 +807,7 @@ int main(int argc, char *argv[])
         }
     }
     else
-    {н
+    {
         std::cerr << "Использование: " << argv[0] << " <input file>" << std::endl;
         return 1; 
     }
