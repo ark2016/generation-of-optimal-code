@@ -1,2 +1,5 @@
 lab2/lab2
 lab3/lab3
+.vscode
+__pycache__
+.venv
