@@ -46,6 +46,9 @@ class SsaBuilder:
         self.CFG = nx.DiGraph(CFG.subgraph(cc))
         self.blocks = set(filter(lambda x: x.block_num in self.CFG, self.blocks))
 
+        # Определяем обратные рёбра для циклов
+        self.identify_back_edges()
+
         # Вычисляем непосредственные доминаторы и создаем словарь доминаторов
         imm_dom = nx.immediate_dominators(self.CFG, 0)
         self.dom_of = dict([(x, {imm_dom[x]}) for x in self.CFG])
@@ -56,6 +59,52 @@ class SsaBuilder:
             for y in ys:
                 if y != x:
                     self.children[y].add(x)
+
+    def identify_back_edges(self):
+        """
+        Определяет обратные рёбра в графе потока управления.
+        
+        Обратное ребро - это ребро, которое указывает от потомка к предку в дереве доминаторов.
+        Такие рёбра образуют циклы в графе.
+        """
+        # Выполняем поиск в глубину для определения обратных рёбер
+        self.back_edges = set()
+        
+        # Множества для отслеживания посещенных и активных узлов
+        visited = set()
+        active = set()
+        
+        def dfs(node):
+            """
+            Вспомогательная функция для поиска в глубину.
+            
+            Args:
+                node: Текущий узел
+            """
+            if node in active:
+                return
+            
+            if node in visited:
+                return
+            
+            visited.add(node)
+            active.add(node)
+            
+            # Просматриваем все исходящие рёбра
+            for succ in self.get_succ(node):
+                if succ in active:
+                    # Найдено обратное ребро
+                    self.back_edges.add((node, succ))
+                else:
+                    dfs(succ)
+            
+            active.remove(node)
+        
+        # Запускаем поиск с начального узла
+        dfs(0)
+        
+        if self.verbose:
+            print(f"Найдены обратные рёбра: {self.back_edges}")
 
     def build_df(self):
         """
@@ -276,6 +325,11 @@ class SsaBuilder:
 
     def update_variable_versions(self):
         """Запускает обход для обновления версий всех переменных"""
+        # Создаем множество для хранения информации о циклах
+        self.loop_headers = set()
+        for _, head in self.back_edges:
+            self.loop_headers.add(head)
+        
         self.traverse()
 
     def traverse(self):
@@ -293,7 +347,136 @@ class SsaBuilder:
         for target_var in var_names:
             self.stack = []  # Стек для хранения версий переменной
             self.counter = 0  # Счетчик для генерации новых версий
+            self.visited_in_loop = {}  # Словарь для отслеживания посещенных узлов в циклах
             self.traverse_rec(0, target_var)
+
+    def traverse_rec(self, bb, target_var):
+        """
+        Рекурсивно обходит граф, обновляя версии указанной переменной.
+        
+        Args:
+            bb: Номер текущего базового блока
+            target_var: Имя переменной, версии которой обновляются
+        """
+        if self.verbose:
+            print("->>> IN BLOCK", bb)
+
+        # Проверяем, является ли блок заголовком цикла
+        is_loop_header = bb in self.loop_headers
+        
+        # Для заголовков циклов, мы можем посещать их несколько раз
+        # Отслеживаем это, чтобы избежать бесконечной рекурсии
+        if is_loop_header:
+            key = (bb, target_var)
+            # Если уже посещали этот заголовок цикла для данной переменной, просто возвращаемся
+            if key in self.visited_in_loop:
+                return
+            self.visited_in_loop[key] = True
+
+        # Обрабатываем инструкции в текущем блоке
+        self._process_block_instructions(bb, target_var)
+        
+        # Обновляем phi-функции в преемниках, исключая обратные рёбра
+        self._update_phi_in_successors(bb, target_var)
+
+        # Рекурсивно обходим дочерние узлы в дереве доминаторов
+        children = self.children[bb]
+        for v1 in children:
+            # Если ребро (bb, v1) - обратное, пропускаем его при первом обходе
+            if (bb, v1) in self.back_edges and not is_loop_header:
+                continue
+            self.traverse_rec(v1, target_var)
+
+        # Убираем версию со стека при выходе из определения
+        self._pop_version_if_redefined(bb, target_var)
+    
+    def _process_block_instructions(self, bb, target_var):
+        """
+        Обрабатывает инструкции в блоке, обновляя версии переменных.
+        
+        Args:
+            bb: Номер текущего базового блока
+            target_var: Имя переменной, версии которой обновляются
+        """
+        for i, instr in enumerate(self.get_block(bb).instructions):
+            # Просматриваем аргументы инструкции
+            for key, val in instr.args.items():
+                # Пропускаем нецелевые переменные
+                if not isinstance(val, Variable) or val.is_temp or val.name != target_var:
+                    continue
+                    
+                name = val.name
+                
+                # Обрабатываем инструкции присваивания (создают новую версию)
+                if instr.typ == STORE:
+                    self._create_new_variable_version(bb, i, key, name)
+                    
+                # Обрабатываем phi-функции (создают новую версию)
+                elif instr.typ == PHI:
+                    self._create_new_variable_version(bb, i, key, name)
+                    
+                # Обновляем использования переменных (не phi)
+                elif instr.typ != PHI:
+                    self._update_variable_use(bb, i, key, name)
+    
+    def _create_new_variable_version(self, bb, i, key, name):
+        """
+        Создает новую версию переменной.
+        
+        Args:
+            bb: Номер текущего базового блока
+            i: Индекс инструкции
+            key: Ключ аргумента в инструкции
+            name: Имя переменной
+        """
+        new_ver = self.counter
+        self.stack.append(self.counter)
+        self.counter += 1
+        self.get_block(bb).instructions[i].args['to'] = Variable(name, new_ver)
+    
+    def _update_variable_use(self, bb, i, key, name):
+        """
+        Обновляет использование переменной.
+        
+        Args:
+            bb: Номер текущего базового блока
+            i: Индекс инструкции
+            key: Ключ аргумента в инструкции
+            name: Имя переменной
+        """
+        self.get_block(bb).instructions[i].args[key] = Variable(name, self.stack[-1])
+    
+    def _update_phi_in_successors(self, bb, target_var):
+        """
+        Обновляет phi-функции в преемниках текущего блока.
+        
+        Args:
+            bb: Номер текущего базового блока
+            target_var: Имя переменной, версии которой обновляются
+        """
+        successors = self.get_succ(bb)
+        for v1 in successors:
+            # Определяем индекс текущего блока среди предшественников v1
+            j = self.which_pred(bb, v1)
+            
+            # Обновляем версии переменных в phi-функциях
+            for instr in self.get_block(v1).instructions:
+                if instr.typ != PHI or instr.args['to'].name != target_var:
+                    continue
+                instr.args['from'][j] = Variable(target_var, self.stack[-1])
+    
+    def _pop_version_if_redefined(self, bb, target_var):
+        """
+        Убирает версию со стека, если переменная была переопределена в блоке.
+        
+        Args:
+            bb: Номер текущего базового блока
+            target_var: Имя переменной
+        """
+        for instr in self.get_block(bb).instructions:
+            if instr.typ == STORE and instr.args['to'].name == target_var:
+                self.stack.pop()
+                break
 
     def which_pred(self, v, v1):
         """
@@ -309,64 +492,3 @@ class SsaBuilder:
         preds = list(self.get_preds(v1))
         preds.sort()
         return preds.index(v)
-
-    def traverse_rec(self, bb, target_var):
-        """
-        Рекурсивно обходит граф, обновляя версии указанной переменной.
-        
-        Args:
-            bb: Номер текущего базового блока
-            target_var: Имя переменной, версии которой обновляются
-        """
-        if self.verbose:
-            print("->>> IN BLOCK", bb)
-
-        # Обрабатываем инструкции в текущем блоке
-        for i, instr in enumerate(self.get_block(bb).instructions):
-            # Просматриваем аргументы инструкции
-            for key, val in instr.args.items():
-                # Пропускаем нецелевые переменные
-                if not isinstance(val, Variable) or val.is_temp or val.name != target_var:
-                    continue
-                    
-                name = val.name
-                
-                # Обрабатываем инструкции присваивания (создают новую версию)
-                if instr.typ == STORE:
-                    new_ver = self.counter
-                    self.stack.append(self.counter)
-                    self.counter += 1
-                    self.get_block(bb).instructions[i].args['to'] = Variable(name, new_ver)
-                    
-                # Обрабатываем phi-функции (создают новую версию)
-                if instr.typ == PHI:
-                    new_ver = self.counter
-                    self.stack.append(self.counter)
-                    self.counter += 1
-                    self.get_block(bb).instructions[i].args['to'] = Variable(name, new_ver)
-                    
-                # Обновляем использования переменных (не phi)
-                if instr.typ != PHI:
-                    self.get_block(bb).instructions[i].args[key] = Variable(name, self.stack[-1])
-
-        # Обновляем phi-функции в преемниках
-        successors = self.get_succ(bb)
-        for v1 in successors:
-            # Определяем индекс текущего блока среди предшественников v1
-            j = self.which_pred(bb, v1)
-            
-            # Обновляем версии переменных в phi-функциях
-            for instr in self.get_block(v1).instructions:
-                if instr.typ != PHI or instr.args['to'].name != target_var:
-                    continue
-                instr.args['from'][j] = (Variable(target_var, self.stack[-1]))
-
-        # Рекурсивно обходим дочерние узлы в дереве доминаторов
-        children = self.children[bb]
-        for v1 in children:
-            self.traverse_rec(v1, target_var)
-
-        # Убираем версию со стека при выходе из определения
-        for instr in self.get_block(bb).instructions:
-            if instr.typ == STORE and instr.args['to'].name == target_var:
-                self.stack.pop()

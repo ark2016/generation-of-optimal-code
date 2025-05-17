@@ -42,9 +42,11 @@ class Variable(Value):
 
     def __eq__(self, other):
         if type(other) == type(self):
-            return self.name == other.name
+            # Сравниваем переменные по имени и версии
+            return self.name == other.name and self.version == other.version
         elif type(other) == str:
-            return 0 == self.name
+            # Если сравниваем со строкой, сравниваем только имя
+            return self.name == other
         return False
 
 
@@ -88,7 +90,7 @@ class Instruction:
             return f'go to BLOCK{self.args["dest"]}'
             
         if self.typ == CONDBR:
-            return f'if (!{self.args["cond"]}) go to BLOCK{self.args["dest1"]} else go to BLOCK{self.args["dest2"]}'
+            return f'if ({self.args["cond"]}) go to BLOCK{self.args["dest1"]} else go to BLOCK{self.args["dest2"]}'
             
         if self.typ == ICMP:
             return f'{self.args["to"]} <- {self.args["arg1"]} > {self.args["arg2"]}'
