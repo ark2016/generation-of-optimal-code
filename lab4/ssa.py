@@ -246,16 +246,7 @@ class SsaBuilder:
             preds = self.CFG.predecessors(bb.block_num)
             for pred in preds:
                 bb.phi_var_blocks[varname].add(pred)
-            
-            # Альтернативный метод (закомментирован)
-            # JS = post_order_blocks | stored_in_blocks
-            # JS_nums = self.blocks_to_nums(JS)
-            # for phi_parent in JS:
-            #     G = deepcopy(self.CFG)
-            #     for rnode in JS_nums.difference({bb.block_num, phi_parent.block_num}):
-            #         G.remove_node(rnode)
-            #     if (phi_parent.block_num != bb.block_num) and nx.has_path(G, phi_parent.block_num, bb.block_num):
-            #         bb.phi_var_blocks[varname].add(phi_parent.block_num)
+
 
     def insert_all_phi(self):
         """
