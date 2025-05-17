@@ -36,7 +36,7 @@ def generate_graphs(blocks, name_prefix):
     
     # Генерируем граф потока управления
     cfg_dot_path = f'results/{name_prefix}_cfg.dot'
-    with open(cfg_dot_path, 'w') as f:
+    with open(cfg_dot_path, 'w', encoding='utf-8') as f:
         f.write(ssab.to_graph())
     
     # Конвертируем DOT в PNG
@@ -51,7 +51,7 @@ def generate_graphs(blocks, name_prefix):
     
     # Генерируем граф SSA
     ssa_dot_path = f'results/{name_prefix}_ssa.dot'
-    with open(ssa_dot_path, 'w') as f:
+    with open(ssa_dot_path, 'w', encoding='utf-8') as f:
         f.write(ssab.to_graph())
     
     # Конвертируем DOT в PNG
@@ -316,7 +316,7 @@ def generate_d3_graph(ssab, output_path, is_ssa=False):
     graph_type = "SSA Form" if is_ssa else "Control Flow Graph"
     
     # Создаем HTML-файл
-    with open(output_path, 'w') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_template.format(
             graph_type=graph_type,
             graph_data=json.dumps(graph_data)

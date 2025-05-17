@@ -3,7 +3,7 @@
     <html>
     <head>
         <meta charset="utf-8">
-        <title>Интерактивный граф Control Flow Graph</title>
+        <title>РРЅС‚РµСЂР°РєС‚РёРІРЅС‹Р№ РіСЂР°С„ Control Flow Graph</title>
         <script src="https://d3js.org/d3.v7.min.js"></script>
         <style>
             body {
@@ -74,32 +74,32 @@
             <div class="graph-container" id="graph"></div>
             <div class="info-panel">
                 <h1>Control Flow Graph</h1>
-                <p>Кликните на узел для просмотра деталей.</p>
+                <p>РљР»РёРєРЅРёС‚Рµ РЅР° СѓР·РµР» РґР»СЏ РїСЂРѕСЃРјРѕС‚СЂР° РґРµС‚Р°Р»РµР№.</p>
                 <div id="nodeInfo" class="node-info">
-                    <h2>Выберите блок</h2>
-                    <p>Информация о выбранном блоке будет отображена здесь.</p>
+                    <h2>Р’С‹Р±РµСЂРёС‚Рµ Р±Р»РѕРє</h2>
+                    <p>РРЅС„РѕСЂРјР°С†РёСЏ Рѕ РІС‹Р±СЂР°РЅРЅРѕРј Р±Р»РѕРєРµ Р±СѓРґРµС‚ РѕС‚РѕР±СЂР°Р¶РµРЅР° Р·РґРµСЃСЊ.</p>
                 </div>
             </div>
         </div>
 
         <script>
-            // Данные графа
+            // Р”Р°РЅРЅС‹Рµ РіСЂР°С„Р°
             const graphData = {"nodes": [{"id": "0", "label": "BLOCK 0", "content": "BLOCK 0<br>i(0) <- 0<br>sum(0) <- 0<br>go to BLOCK1"}, {"id": "1", "label": "BLOCK 1", "content": "BLOCK 1<br>tmp_1_0 <- i(0) > 5<br>if (tmp_1_0) go to BLOCK2 else go to BLOCK3"}, {"id": "2", "label": "BLOCK 2", "content": "BLOCK 2<br>tmp_2_0 <- sum(0) add i(0)<br>sum(0) <- tmp_2_0<br>tmp_2_1 <- i(0) add 1<br>i(0) <- tmp_2_1<br>go to BLOCK1"}, {"id": "3", "label": "BLOCK 3", "content": "BLOCK 3<br>ret: value sum(0)"}], "links": [{"source": "0", "target": "1"}, {"source": "1", "target": "2", "type": "true"}, {"source": "1", "target": "3", "type": "false"}, {"source": "2", "target": "1"}]};
             
-            // Настройка визуализации
+            // РќР°СЃС‚СЂРѕР№РєР° РІРёР·СѓР°Р»РёР·Р°С†РёРё
             const width = document.getElementById('graph').clientWidth;
             const height = document.getElementById('graph').clientHeight;
             
-            // Создание SVG
+            // РЎРѕР·РґР°РЅРёРµ SVG
             const svg = d3.select('#graph')
                 .append('svg')
                 .attr('width', width)
                 .attr('height', height);
             
-            // Создание контейнера для графа
+            // РЎРѕР·РґР°РЅРёРµ РєРѕРЅС‚РµР№РЅРµСЂР° РґР»СЏ РіСЂР°С„Р°
             const g = svg.append('g');
             
-            // Добавляем масштабирование и перемещение
+            // Р”РѕР±Р°РІР»СЏРµРј РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ Рё РїРµСЂРµРјРµС‰РµРЅРёРµ
             const zoom = d3.zoom()
                 .scaleExtent([0.1, 4])
                 .on('zoom', (event) => {
@@ -107,7 +107,7 @@
                 });
             svg.call(zoom);
             
-            // Создание силового макета
+            // РЎРѕР·РґР°РЅРёРµ СЃРёР»РѕРІРѕРіРѕ РјР°РєРµС‚Р°
             const simulation = d3.forceSimulation(graphData.nodes)
                 .force('link', d3.forceLink(graphData.links).id(d => d.id).distance(150))
                 .force('charge', d3.forceManyBody().strength(-300))
@@ -115,7 +115,7 @@
                 .force('x', d3.forceX(width / 2).strength(0.1))
                 .force('y', d3.forceY(height / 2).strength(0.1));
             
-            // Добавление ребер
+            // Р”РѕР±Р°РІР»РµРЅРёРµ СЂРµР±РµСЂ
             const link = g.append('g')
                 .selectAll('line')
                 .data(graphData.links)
@@ -124,7 +124,7 @@
                 .attr('class', d => `link ${d.type}`)
                 .attr('marker-end', d => d.type ? `url(#arrow-${d.type})` : 'url(#arrow)');
             
-            // Добавление узлов
+            // Р”РѕР±Р°РІР»РµРЅРёРµ СѓР·Р»РѕРІ
             const node = g.append('g')
                 .selectAll('.node')
                 .data(graphData.nodes)
@@ -136,20 +136,20 @@
                     .on('drag', dragged)
                     .on('end', dragended));
             
-            // Добавление круга для узла
+            // Р”РѕР±Р°РІР»РµРЅРёРµ РєСЂСѓРіР° РґР»СЏ СѓР·Р»Р°
             node.append('circle')
                 .attr('r', 20);
             
-            // Добавление текста узла
+            // Р”РѕР±Р°РІР»РµРЅРёРµ С‚РµРєСЃС‚Р° СѓР·Р»Р°
             node.append('text')
                 .attr('dy', 4)
                 .attr('text-anchor', 'middle')
                 .text(d => d.id);
             
-            // Обработка клика по узлу
+            // РћР±СЂР°Р±РѕС‚РєР° РєР»РёРєР° РїРѕ СѓР·Р»Сѓ
             node.on('click', showNodeInfo);
             
-            // Обновление позиций при симуляции
+            // РћР±РЅРѕРІР»РµРЅРёРµ РїРѕР·РёС†РёР№ РїСЂРё СЃРёРјСѓР»СЏС†РёРё
             simulation.on('tick', () => {
                 link
                     .attr('x1', d => d.source.x)
@@ -161,7 +161,7 @@
                     .attr('transform', d => `translate(${d.x},${d.y})`);
             });
             
-            // Функции для перетаскивания узлов
+            // Р¤СѓРЅРєС†РёРё РґР»СЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ СѓР·Р»РѕРІ
             function dragstarted(event, d) {
                 if (!event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
@@ -179,7 +179,7 @@
                 d.fy = null;
             }
             
-            // Показать информацию о узле
+            // РџРѕРєР°Р·Р°С‚СЊ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ СѓР·Р»Рµ
             function showNodeInfo(event, d) {
                 const nodeInfo = document.getElementById('nodeInfo');
                 nodeInfo.innerHTML = `
