@@ -2,7 +2,7 @@ digraph G{
 node [shape=box nojustify=false]
 0 [label="BLOCK 0\l    i(0) <- 0\l    sum(0) <- 0\l    go to BLOCK1"]
 0 -> 1
-1 [label="BLOCK 1\l    sum(1) = phi(sum(0), sum(2))\l    i(1) = phi(i(0), i(2))\l    tmp_1_0 <- i(1) > 5\l    if (!tmp_1_0) go to BLOCK2 else go to BLOCK3"]
+1 [label="BLOCK 1\l    sum(1) = phi(sum(0), sum(2))\l    i(1) = phi(i(0), i(2))\l    tmp_1_0 <- i(1) > 5\l    if (tmp_1_0) go to BLOCK2 else go to BLOCK3"]
 1 -> 2 [label=true]
 1 -> 3 [label=false]
 2 [label="BLOCK 2\l    tmp_2_0 <- sum(1) add i(1)\l    sum(2) <- tmp_2_0\l    tmp_2_1 <- i(1) add 1\l    i(2) <- tmp_2_1\l    go to BLOCK1"]
